@@ -1,7 +1,9 @@
 # Password manager in Python
 
 from Crypto.Protocol.KDF import PBKDF2
-import Crypto.Random
+from Crypto import Random
+import smtplib
+import random
 import hashlib
 import os
 import getpass
@@ -15,13 +17,41 @@ def print_menu():
     print("4. Quit")
     print(67 * "-")
 
+def print_manage_menu():
+    print(22 * "-", "MANAGE YOUR PASSWORDS", 22 * "-")
+    print("5. List passwords with description")
+    print("6. Add new password with description")
+    print("7. Modify passwords")
+    print("8. Delete password")
+    print("9. Change account password")
+    print("10. Log out")
+    print("TODO: MANAGER FUNCTIONS")
+    print(67 * "-")
+
 
 def pbkdf_gen(password):
-    random = Crypto.Random.new()
+    random = Random.new()
     salt = hashlib.sha256().digest()
     keysize = 256
     keys = PBKDF2(password, salt, count=20000, dkLen = keysize * 2)  # 2x256 bit keys
     return keys
+
+
+def sendOutGeneratedPassword(email):
+    # Generate random strong password
+    dic = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ.,;:?!-_{}@&#<>[]ß×÷|\~^"
+    length = 32
+    generatedPass = "".join(random.sample(dic, length))
+    print(generatedPass)
+
+    # Register new password to the correct file
+    with open(email+".bin", 'wb') as fgen:
+        fgen.write(pbkdf_gen(generatedPass))
+    fgen.close()
+
+    # Send out mail
+    print("TODO: Your generated password has been sent out")
+
 
 # Ezt kell elküldeni emailben -> SMTP library
 # pbkdf_gen("LehelJelszoAsd")
@@ -29,6 +59,7 @@ def pbkdf_gen(password):
 loop = True
 register = True
 login = True
+manage = True
 
 while loop:  # While loop which will keep going until loop = False
     print_menu()  # Displays menu
@@ -138,19 +169,51 @@ while loop:  # While loop which will keep going until loop = False
             # print(storedkey)
 
             if storedkey == hashedkey:
-                print("Logged in successfully!")
-                print("TODO: MANAGER FUNCTIONS")
-                break  # just temporarily
+                manage = True
+                while manage:
+                    print_manage_menu()
+                    manage_choice = eval(input("Enter your choice [5-10]: "))
+
+                    if manage_choice == 5:
+                        print("LIST PASSWORDS")
+                        # TODO
+                    elif manage_choice == 6:
+                        print("ADD NEW PASSWORD")
+                        # TODO
+                    elif manage_choice == 7:
+                        print("MODIFY PASSWORDS")
+                        # TODO
+                    elif manage_choice == 8:
+                        print("DELETE PASSWORDS")
+                        # TODO
+                    elif manage_choice == 9:
+                        print("CHANGE ACCOUNT PASSWORD")
+                        # TODO
+                    elif manage_choice == 10:
+                        manage = False
+                        # TODO
+                    else:
+                        # Any integer inputs other than values 1-5 we print an error message
+                        print("Wrong option selection. Please try again..")
+
+                # break  # just temporarily
             else:
                 print("Incorrect e-mail or password. Please try again.")
 
     elif choice == 3:
-        print("Forgot your password? has been selected")
-        # You can add your code or functions here
+        print(22 * "-", "FORGOT YOUR PASSWORD?", 22 * "-")
+        forgot_email = input("Enter your e-mail address: ")
+        if forgot_email in open('users.txt').read():
+            print("E-mail found in users")
+            sendOutGeneratedPassword(forgot_email)
+
+        else:
+            print("E-mail is invalid, please try again")
+
     elif choice == 4:
         print("Quit has been selected")
         # You can add your code or functions here
         loop = False  # This will make the while loop to end as not value of loop is set to False
     else:
         # Any integer inputs other than values 1-5 we print an error message
-        input("Wrong option selection. Enter any key to try again..")
+        print("Wrong option selection. Please try again..")
