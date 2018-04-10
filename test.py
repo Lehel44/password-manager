@@ -119,7 +119,7 @@ while loop:  # While loop which will keep going until loop = False
                         number = False
 
                     # Are there symbols in the password?
-                    symbols = set('.,;:?!-_{}@&#<>[]$ß×÷€|\~^đĐŁł')
+                    symbols = set('.,;:?!-_{}@&#<>[]ß×÷|\~^')
                     if any((c in symbols) for c in pw1):
                         print('Password contains symbol')
                         symbol = True
