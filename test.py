@@ -61,9 +61,18 @@ register = True
 login = True
 manage = True
 
+os.system('clear')
+
 while loop:  # While loop which will keep going until loop = False
-    print_menu()  # Displays menu
-    choice = eval(input("Enter your choice [1-4]: "))
+
+    while True:
+        try:
+            print_menu()  # Displays menu
+            choice = int(input("Enter your choice [1-4]: "))
+            break
+        except:
+            os.system('clear')
+            print("Wrong option selection. Please try again..")
 
     if choice == 1:
         while register:
@@ -74,17 +83,18 @@ while loop:  # While loop which will keep going until loop = False
                 file = open('users.txt', 'w+')
                 file.close()
             if email in open('users.txt').read():
-                print("Email already exist! Please select another one. Or did you forget your password?")
+                print("Email already exists! Please select another one. Or did you forget your password?")
                 break
 
             # print("The chosen e-mail is: ", email)
             print("A strong password is at least 8 characters long and contains letters, numbers and symbols")
             pw1 = input("Please enter a strong password: ")
 
+            enc = 'iso-8859-15'
             # Same as email?
             if pw1 in email:
-                print("E-mail and password are (party) the same. Please chose another password")
-            elif pw1 in open('weakPasswordDictionary.txt').read():
+                print("E-mail and password are (partly) the same. Please chose another password")
+            elif pw1 in open('weakPasswordDictionary.txt', encoding=enc).read():
                 print("Your password has been found in the weak password dictionary. Please chose another password")
             else:
                 pw2 = input("Please re-enter your chosen password: ")
@@ -92,42 +102,42 @@ while loop:  # While loop which will keep going until loop = False
                 # pw2 = getpass.getpass('Please re-enter your chosen password: ')
 
                 if pw1 == pw2:
-                    print("Passwords are the same")
+                    print("✔ Passwords are the same")
 
                     # Long enough?
                     if len(pw1) > 7:
-                        print("Password is long enough")
+                        print("✔ Password is long enough")
                         long = True
                     else:
-                        print("Password is not long enough")
+                        print("✖ Password is not long enough")
                         long = False
 
                     # Are there letters in the password?
                     if any(char.isalpha() for char in pw1):
-                        print("Password contains letter")
+                        print("✔ Password contains letter")
                         letter = True
                     else:
-                        print("Password does not contain letter")
+                        print("✖ Password does not contain letter")
                         letter = False
 
                     # Are there numbers in the password?
                     if any(char.isdigit() for char in pw1):
-                        print("Password contains number")
+                        print("✔ Password contains number")
                         number = True
                     else:
-                        print("Password does not contain number")
+                        print("✖ Password does not contain number")
                         number = False
 
                     # Are there symbols in the password?
                     symbols = set('.,;:?!-_{}@&#<>[]ß×÷|\~^')
                     if any((c in symbols) for c in pw1):
-                        print('Password contains symbol')
+                        print("✔ Password contains symbol")
                         symbol = True
                     else:
-                        print('Password does not contain symbol')
-                        symbol = True
+                        print("✖ Password does not contain symbol")
+                        symbol = False
                 else:
-                    print("Passwords are different, please try again")
+                    print("✖ Passwords are different, please try again")
 
                 if long and letter and number and symbol:
                     print("Good password")
@@ -145,7 +155,7 @@ while loop:  # While loop which will keep going until loop = False
                         f.write(pbkdf_gen(pw1))
                     f.close()
                 else:
-                    print("Bad password. Please try again.")
+                    print("Weak password. Please try again.")
 
     elif choice == 2:
         while login:
@@ -216,4 +226,5 @@ while loop:  # While loop which will keep going until loop = False
         loop = False  # This will make the while loop to end as not value of loop is set to False
     else:
         # Any integer inputs other than values 1-5 we print an error message
+        os.system('clear')
         print("Wrong option selection. Please try again..")
