@@ -10,7 +10,7 @@ import getpass
 
 # Menu design
 def print_menu():
-    print(30 * "-", "MENU", 30 * "-")
+    print(31 * "-", "MENU", 30 * "-")
     print("1. Register")
     print("2. Login")
     print("3. Forgot your password?")
@@ -19,12 +19,12 @@ def print_menu():
 
 def print_manage_menu():
     print(22 * "-", "MANAGE YOUR PASSWORDS", 22 * "-")
-    print("5. List passwords with description")
-    print("6. Add new password with description")
-    print("7. Modify passwords")
-    print("8. Delete password")
-    print("9. Change account password")
-    print("10. Log out")
+    print("1. List passwords with description")
+    print("2. Add new password with description")
+    print("3. Modify passwords")
+    print("4. Delete password")
+    print("5. Change account password")
+    print("6. Log out")
     print("TODO: MANAGER FUNCTIONS")
     print(67 * "-")
 
@@ -83,21 +83,29 @@ while loop:  # While loop which will keep going until loop = False
                 file = open('users.txt', 'w+')
                 file.close()
             if email in open('users.txt').read():
-                print("Email already exists! Please select another one. Or did you forget your password?")
+                input("✖ Email already exists! Please select another one. Or did you forget your password?\n"
+                      "Press Enter to continue...")
+                os.system('clear')
                 break
 
             # print("The chosen e-mail is: ", email)
-            print("A strong password is at least 8 characters long and contains letters, numbers and symbols")
-            pw1 = input("Please enter a strong password: ")
+            print("A strong password is at least 8 characters long and contains letters, numbers and symbols.")
+            pw1 = input("Please enter a strong password: ")  # TODO: getpass.getpass()
 
             enc = 'iso-8859-15'
             # Same as email?
             if pw1 in email:
-                print("E-mail and password are (partly) the same. Please chose another password")
+                input("✖ E-mail and password are (partly) the same. Please choose another password.\n"
+                      "Press Enter to continue...")
+                os.system('clear')
+                break
             elif pw1 in open('weakPasswordDictionary.txt', encoding=enc).read():
-                print("Your password has been found in the weak password dictionary. Please chose another password")
+                input("✖ Your password has been found in the weak password dictionary. Please choose another password."
+                      "\nPress Enter to continue...")
+                os.system('clear')
+                break
             else:
-                pw2 = input("Please re-enter your chosen password: ")
+                pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
                 # pw1 = getpass.getpass('Please enter a strong password: ')
                 # pw2 = getpass.getpass('Please re-enter your chosen password: ')
 
@@ -109,7 +117,7 @@ while loop:  # While loop which will keep going until loop = False
                         print("✔ Password is long enough")
                         long = True
                     else:
-                        print("✖ Password is not long enough")
+                        print("✖ Password is less than 8 characters")
                         long = False
 
                     # Are there letters in the password?
@@ -136,26 +144,33 @@ while loop:  # While loop which will keep going until loop = False
                     else:
                         print("✖ Password does not contain symbol")
                         symbol = False
+
+                    if long and letter and number and symbol:
+                        print("✔✔✔ Good password ✔✔✔")
+
+                        # Add new e-mail to users.txt
+                        with open('users.txt', 'a') as file:
+                            file.write(email + "\n")
+                        file.close
+
+                        # Create new file with PBKDF2 key for user
+                        emailfile = email + ".bin"
+
+                        with open(emailfile, 'wb') as f:
+                            f.write(pbkdf_gen(pw1))
+                        f.close()
+
+                        os.system('clear')
+                        break
+                    else:
+                        input("✖✖✖ Weak password. Please try again.\nPress Enter to continue...")
+                        os.system('clear')
+                        break
+
                 else:
-                    print("✖ Passwords are different, please try again")
-
-                if long and letter and number and symbol:
-                    print("Good password")
-                    register = False
-
-                    # Add new e-mail to users.txt
-                    with open('users.txt', 'a') as file:
-                        file.write(email+"\n")
-                    file.close
-
-                    # Create new file with PBKDF2 key for user
-                    emailfile = email + ".bin"
-
-                    with open(emailfile, 'wb') as f:
-                        f.write(pbkdf_gen(pw1))
-                    f.close()
-                else:
-                    print("Weak password. Please try again.")
+                    input("✖ Passwords do not match. Please try again.\nPress Enter to continue...")
+                    os.system('clear')
+                    break
 
     elif choice == 2:
         while login:
@@ -170,7 +185,7 @@ while loop:  # While loop which will keep going until loop = False
                 print("E-mail found in users")
                 login_file = login_email + ".bin"
 
-            login_pw = input("Please enter your password: ")
+            login_pw = input("Please enter your password: ")  # TODO: getpass.getpass()
             hashedkey = pbkdf_gen(login_pw)
             # print(hashedkey)
 
@@ -179,31 +194,40 @@ while loop:  # While loop which will keep going until loop = False
             # print(storedkey)
 
             if storedkey == hashedkey:
+                os.system('clear')
+
                 manage = True
                 while manage:
-                    print_manage_menu()
-                    manage_choice = eval(input("Enter your choice [5-10]: "))
 
-                    if manage_choice == 5:
+                    while True:
+                        try:
+                            print_manage_menu()
+                            manage_choice = int(input("Enter your choice [1-6]: "))
+                            break
+                        except:
+                            os.system('clear')
+                            print("Wrong option selection. Please try again..")
+
+                    if manage_choice == 1:
                         print("LIST PASSWORDS")
                         # TODO
-                    elif manage_choice == 6:
+                    elif manage_choice == 2:
                         print("ADD NEW PASSWORD")
                         # TODO
-                    elif manage_choice == 7:
+                    elif manage_choice == 3:
                         print("MODIFY PASSWORDS")
                         # TODO
-                    elif manage_choice == 8:
+                    elif manage_choice == 4:
                         print("DELETE PASSWORDS")
                         # TODO
-                    elif manage_choice == 9:
+                    elif manage_choice == 5:
                         print("CHANGE ACCOUNT PASSWORD")
                         # TODO
-                    elif manage_choice == 10:
+                    elif manage_choice == 6:
                         manage = False
                         # TODO
                     else:
-                        # Any integer inputs other than values 1-5 we print an error message
+                        os.system('clear')
                         print("Wrong option selection. Please try again..")
 
                 # break  # just temporarily
