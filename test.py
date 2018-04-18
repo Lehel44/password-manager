@@ -79,10 +79,13 @@ while loop:  # While loop which will keep going until loop = False
             print(29 * "-", "REGISTER", 28 * "-")
             email = input("Please enter your e-mail address: ")
 
-            if not os.path.exists('users.txt'):
-                file = open('users.txt', 'w+')
+            if not os.path.exists('database'):
+                os.mkdir('database')
+            if not os.path.exists('database/users.txt'):
+                file = open('database/users.txt', 'w+')
                 file.close()
-            if email in open('users.txt').read():
+
+            if email in open('database/users.txt').read().splitlines():
                 input("✖ Email already exists! Please select another one. Or did you forget your password?\n"
                       "Press Enter to continue...")
                 os.system('clear')
@@ -149,21 +152,22 @@ while loop:  # While loop which will keep going until loop = False
                         print("✔✔✔ Good password ✔✔✔")
 
                         # Add new e-mail to users.txt
-                        with open('users.txt', 'a') as file:
+                        with open('database/users.txt', 'a') as file:
                             file.write(email + "\n")
                         file.close
 
                         # Create new file with PBKDF2 key for user
                         emailfile = email + ".bin"
 
-                        with open(emailfile, 'wb') as f:
+                        os.mkdir('database/' + email)
+                        with open('database/' + email + '/' + emailfile, 'wb') as f:
                             f.write(pbkdf_gen(pw1))
                         f.close()
 
                         os.system('clear')
                         break
                     else:
-                        input("✖✖✖ Weak password. Please try again.\nPress Enter to continue...")
+                        input("✖ ✖ ✖ Weak password. Please try again.\nPress Enter to continue...")
                         os.system('clear')
                         break
 
@@ -176,73 +180,85 @@ while loop:  # While loop which will keep going until loop = False
         while login:
             print(30 * "-", "LOGIN", 30 * "-")
 
-            if not os.path.exists('users.txt'):
-                print("You need to register first!")
+            if not os.path.exists('database/users.txt'):
+                input("✖ You need to register first!\nPress Enter to continue...")
+                os.system('clear')
                 break
 
             login_email = input("Please enter your e-mail address: ")
-            if login_email in open('users.txt').read():
-                print("E-mail found in users")
-                login_file = login_email + ".bin"
+            login_file = login_email + ".bin"
 
             login_pw = input("Please enter your password: ")  # TODO: getpass.getpass()
             hashedkey = pbkdf_gen(login_pw)
             # print(hashedkey)
 
-            with open(login_file, 'rb') as fin:
-                storedkey = fin.read()
-            # print(storedkey)
+            if login_email in open('database/users.txt').read().splitlines():
+                with open('database/' + login_email + '/' + login_file, 'rb') as fin:
+                    storedkey = fin.read()
+                # print(storedkey)
 
-            if storedkey == hashedkey:
-                os.system('clear')
+                if storedkey == hashedkey:
+                    os.system('clear')
 
-                manage = True
-                while manage:
+                    manage = True
+                    while manage:
 
-                    while True:
-                        try:
-                            print_manage_menu()
-                            manage_choice = int(input("Enter your choice [1-6]: "))
-                            break
-                        except:
+                        while True:
+                            try:
+                                print_manage_menu()
+                                manage_choice = int(input("Enter your choice [1-6]: "))
+                                break
+                            except:
+                                os.system('clear')
+                                print("Wrong option selection. Please try again..")
+
+                        if manage_choice == 1:
+                            print("LIST PASSWORDS")
+                            # TODO
+                        elif manage_choice == 2:
+                            print("ADD NEW PASSWORD")
+                            # TODO
+                        elif manage_choice == 3:
+                            print("MODIFY PASSWORDS")
+                            # TODO
+                        elif manage_choice == 4:
+                            print("DELETE PASSWORDS")
+                            # TODO
+                        elif manage_choice == 5:
+                            print("CHANGE ACCOUNT PASSWORD")
+                            # TODO
+                        elif manage_choice == 6:
+                            manage = False
+                            # TODO
+                        else:
                             os.system('clear')
                             print("Wrong option selection. Please try again..")
 
-                    if manage_choice == 1:
-                        print("LIST PASSWORDS")
-                        # TODO
-                    elif manage_choice == 2:
-                        print("ADD NEW PASSWORD")
-                        # TODO
-                    elif manage_choice == 3:
-                        print("MODIFY PASSWORDS")
-                        # TODO
-                    elif manage_choice == 4:
-                        print("DELETE PASSWORDS")
-                        # TODO
-                    elif manage_choice == 5:
-                        print("CHANGE ACCOUNT PASSWORD")
-                        # TODO
-                    elif manage_choice == 6:
-                        manage = False
-                        # TODO
-                    else:
-                        os.system('clear')
-                        print("Wrong option selection. Please try again..")
-
-                # break  # just temporarily
+                    # break  # just temporarily
+                else:
+                    input("✖ Incorrect e-mail or password. Please try again.\nPress Enter to continue...")
+                    os.system('clear')
+                    break
             else:
-                print("Incorrect e-mail or password. Please try again.")
+                input("✖ Incorrect e-mail or password. Please try again.\nPress Enter to continue...")
+                os.system('clear')
+                break
 
     elif choice == 3:
         print(22 * "-", "FORGOT YOUR PASSWORD?", 22 * "-")
-        forgot_email = input("Enter your e-mail address: ")
-        if forgot_email in open('users.txt').read():
-            print("E-mail found in users")
-            sendOutGeneratedPassword(forgot_email)
 
+        if not os.path.exists('database/users.txt'):
+            input("✖ You need to register first.\nPress Enter to continue...")
+            os.system('clear')
         else:
-            print("E-mail is invalid, please try again")
+            forgot_email = input("Enter your e-mail address: ")
+            if forgot_email in open('database/users.txt').read().splitlines():
+                print("✔ E-mail found in users")
+                sendOutGeneratedPassword(forgot_email)
+                os.system('clear')
+            else:
+                input("✖ E-mail is invalid. Please try again.\nPress Enter to continue...")
+                os.system('clear')
 
     elif choice == 4:
         print("Quit has been selected")
