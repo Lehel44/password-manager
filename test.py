@@ -3,10 +3,16 @@
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto import Random
 import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.message import EmailMessage
 import random
 import hashlib
 import os
 import getpass
+
+symbols = set('''.,;:?!'"-_{}@&#<>[]ß×÷|\~^''')
+
 
 # Menu design
 def print_menu():
@@ -16,6 +22,7 @@ def print_menu():
     print("3. Forgot your password?")
     print("4. Quit")
     print(67 * "-")
+
 
 def print_manage_menu():
     print(22 * "-", "MANAGE YOUR PASSWORDS", 22 * "-")
@@ -30,27 +37,62 @@ def print_manage_menu():
 
 
 def pbkdf_gen(password):
-    random = Random.new()
     salt = hashlib.sha256().digest()
-    keysize = 256
-    keys = PBKDF2(password, salt, count=20000, dkLen = keysize * 2)  # 2x256 bit keys
+    key_size = 256
+    keys = PBKDF2(password, salt, count=20000, dkLen = key_size * 2)  # 2x256 bit keys
     return keys
 
 
-def sendOutGeneratedPassword(email):
+def send_out_generated_password(email):
     # Generate random strong password
-    dic = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ.,;:?!-_{}@&#<>[]ß×÷|\~^"
+    dic = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,;:?!-_{}@&#<>[]ß×÷|\~^"
     length = 32
-    generatedPass = "".join(random.sample(dic, length))
-    print(generatedPass)
+
+    strong = False
+    while not strong:
+        generated_pass = "".join(random.sample(dic, length))
+        if any(char.isalpha() for char in generated_pass):
+            if any(char.isdigit() for char in generated_pass):
+                if any((c in symbols) for c in generated_pass):
+                    strong = True
 
     # Register new password to the correct file
-    with open(email+".bin", 'wb') as fgen:
-        fgen.write(pbkdf_gen(generatedPass))
-    fgen.close()
+    pbkdf_pass = pbkdf_gen(generated_pass)
+    if email in open('database/users.txt').read().splitlines():
+        with open('database/' + email + '/' + email + '.bin', 'wb') as fgen:
+            fgen.write(pbkdf_pass)
+        fgen.close()
 
-    # Send out mail
-    print("TODO: Your generated password has been sent out")
+    to = email
+    name = to.split('@')[0].capitalize()
+    robot_user = 'pwmanager007@gmail.com'
+    robot_pwd = 'Crysys007'
+    smtpserver = smtplib.SMTP("smtp.gmail.com", 587)
+    smtpserver.ehlo()
+    smtpserver.starttls()
+    smtpserver.ehlo
+    smtpserver.login(robot_user, robot_pwd)
+    msg = MIMEMultipart('multipart')
+    msg['Subject'] = 'Password Manager new password'
+    msg['From'] = robot_user
+    msg['To'] = to
+    part1 = MIMEText('Hi ' + name + ',\n\n'
+    'We recieved a request to reset your Password Manager password.\n\n'
+    'Your new password: ', 'plain')
+    part2 = MIMEText('<b>{0}</b>'.format(generated_pass), 'html')
+    part3 = MIMEText('\nYou can change it after logged in.', 'plain')
+    part4 = MIMEText('''<b>Didn't request this change?</b>''', 'html')
+    part5 = MIMEText('''If you didn't request a new password, let your Help Desk know your computer was hacked.\n\n'''
+    'Kind regards,\n'
+    '       Password Manager Team', 'plain')
+
+    msg.attach(part1)
+    msg.attach(part2)
+    msg.attach(part3)
+    msg.attach(part4)
+    msg.attach(part5)
+    smtpserver.sendmail(robot_user, to, msg.as_string())
+    smtpserver.close()
 
 
 # Ezt kell elküldeni emailben -> SMTP library
@@ -86,7 +128,7 @@ while loop:  # While loop which will keep going until loop = False
                 file.close()
 
             if email in open('database/users.txt').read().splitlines():
-                input("✖ Email already exists! Please select another one. Or did you forget your password?\n"
+                input("✖ That e-mail is taken! Please try another one. Or did you forget your password?\n"
                       "Press Enter to continue...")
                 os.system('clear')
                 break
@@ -140,7 +182,6 @@ while loop:  # While loop which will keep going until loop = False
                         number = False
 
                     # Are there symbols in the password?
-                    symbols = set('.,;:?!-_{}@&#<>[]ß×÷|\~^')
                     if any((c in symbols) for c in pw1):
                         print("✔ Password contains symbol")
                         symbol = True
@@ -252,13 +293,9 @@ while loop:  # While loop which will keep going until loop = False
             os.system('clear')
         else:
             forgot_email = input("Enter your e-mail address: ")
-            if forgot_email in open('database/users.txt').read().splitlines():
-                print("✔ E-mail found in users")
-                sendOutGeneratedPassword(forgot_email)
-                os.system('clear')
-            else:
-                input("✖ E-mail is invalid. Please try again.\nPress Enter to continue...")
-                os.system('clear')
+            send_out_generated_password(forgot_email)
+            input("E-mail is sent with the new password. Check your mailbox.\nPress Enter to continue...")
+            os.system('clear')
 
     elif choice == 4:
         print("Quit has been selected")
