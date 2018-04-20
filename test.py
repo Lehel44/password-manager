@@ -9,6 +9,7 @@ from email.message import EmailMessage
 import random
 import hashlib
 import os
+import re
 import getpass
 
 symbols = set('''.,;:?!'"-_{}@&#<>[]ß×÷|\~^''')
@@ -44,55 +45,66 @@ def pbkdf_gen(password):
 
 
 def send_out_generated_password(email):
-    # Generate random strong password
-    dic = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,;:?!-_{}@&#<>[]ß×÷|\~^"
-    length = 32
+    if not re.match(".+@.+\..+", email):
+        input("✖ Please give a valid e-mail address!\nPress Enter to continue...")
+        os.system('clear')
+    else:
+        # Generate random strong password
+        dic = '''abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,;:?!'"-_{}@&#<>[]ß×÷|\~^'''
+        length = 32
 
-    strong = False
-    while not strong:
-        generated_pass = "".join(random.sample(dic, length))
-        if any(char.isalpha() for char in generated_pass):
-            if any(char.isdigit() for char in generated_pass):
-                if any((c in symbols) for c in generated_pass):
-                    strong = True
+        strong = False
+        while not strong:
+            generated_pass = "".join(random.sample(dic, length))
+            if any(char.isalpha() for char in generated_pass):
+                if any(char.isdigit() for char in generated_pass):
+                    if any((c in symbols) for c in generated_pass):
+                        strong = True
 
-    # Register new password to the correct file
-    pbkdf_pass = pbkdf_gen(generated_pass)
-    if email in open('database/users.txt').read().splitlines():
-        with open('database/' + email + '/' + email + '.bin', 'wb') as fgen:
-            fgen.write(pbkdf_pass)
-        fgen.close()
+        # Register new password to the correct file
+        pbkdf_pass = pbkdf_gen(generated_pass)
+        if email in open('database/users.txt').read().splitlines():
+            with open('database/' + email + '/' + email + '.bin', 'wb') as fgen:
+                fgen.write(pbkdf_pass)
+            fgen.close()
 
-    to = email
-    name = to.split('@')[0].capitalize()
-    robot_user = 'pwmanager007@gmail.com'
-    robot_pwd = 'Crysys007'
-    smtpserver = smtplib.SMTP("smtp.gmail.com", 587)
-    smtpserver.ehlo()
-    smtpserver.starttls()
-    smtpserver.ehlo
-    smtpserver.login(robot_user, robot_pwd)
-    msg = MIMEMultipart('multipart')
-    msg['Subject'] = 'Password Manager new password'
-    msg['From'] = robot_user
-    msg['To'] = to
-    part1 = MIMEText('Hi ' + name + ',\n\n'
-    'We recieved a request to reset your Password Manager password.\n\n'
-    'Your new password: ', 'plain')
-    part2 = MIMEText('<b>{0}</b>'.format(generated_pass), 'html')
-    part3 = MIMEText('\nYou can change it after logged in.', 'plain')
-    part4 = MIMEText('''<b>Didn't request this change?</b>''', 'html')
-    part5 = MIMEText('''If you didn't request a new password, let your Help Desk know your computer was hacked.\n\n'''
-    'Kind regards,\n'
-    '       Password Manager Team', 'plain')
+        to = email
+        name = to.split('@')[0].capitalize()
+        robot_user = 'pwmanager007@gmail.com'
+        robot_pwd = 'Crysys007'
 
-    msg.attach(part1)
-    msg.attach(part2)
-    msg.attach(part3)
-    msg.attach(part4)
-    msg.attach(part5)
-    smtpserver.sendmail(robot_user, to, msg.as_string())
-    smtpserver.close()
+        smtpserver = smtplib.SMTP("smtp.gmail.com", 587)
+        smtpserver.ehlo()
+        smtpserver.starttls()
+        smtpserver.ehlo
+        smtpserver.login(robot_user, robot_pwd)
+
+        msg = MIMEMultipart('multipart')
+        msg['Subject'] = 'Password Manager new password'
+        msg['From'] = robot_user
+        msg['To'] = to
+
+        part1 = MIMEText('Hi ' + name + ',\n\n'
+        'We recieved a request to reset your Password Manager password.\n\n'
+        'Your new password:', 'plain')
+        part2 = MIMEText('<b>{0}</b>'.format(generated_pass), 'html')
+        part3 = MIMEText('\nYou can change it after logged in.', 'plain')
+        part4 = MIMEText('''<b>Didn't request this change?</b>''', 'html')
+        part5 = MIMEText('''If you didn't request a new password, let your Help Desk know your computer was hacked.\n\n'''
+        'Kind regards,\n'
+        '       Password Manager Team', 'plain')
+
+        msg.attach(part1)
+        msg.attach(part2)
+        msg.attach(part3)
+        msg.attach(part4)
+        msg.attach(part5)
+        smtpserver.sendmail(robot_user, to, msg.as_string())
+        smtpserver.close()
+
+        input("E-mail is sent with the new password. Check your mailbox, maybe your spams too.\n"
+              "Press Enter to continue...")
+        os.system('clear')
 
 
 # Ezt kell elküldeni emailben -> SMTP library
@@ -130,6 +142,11 @@ while loop:  # While loop which will keep going until loop = False
             if email in open('database/users.txt').read().splitlines():
                 input("✖ That e-mail is taken! Please try another one. Or did you forget your password?\n"
                       "Press Enter to continue...")
+                os.system('clear')
+                break
+
+            if not re.match(".+@.+\..+", email):
+                input("✖ Please register with an e-mail address!\nPress Enter to continue...")
                 os.system('clear')
                 break
 
@@ -294,8 +311,6 @@ while loop:  # While loop which will keep going until loop = False
         else:
             forgot_email = input("Enter your e-mail address: ")
             send_out_generated_password(forgot_email)
-            input("E-mail is sent with the new password. Check your mailbox.\nPress Enter to continue...")
-            os.system('clear')
 
     elif choice == 4:
         print("Quit has been selected")
