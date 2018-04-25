@@ -14,6 +14,7 @@ import hashlib
 import os
 import re
 import smtplib
+import datetime
 import getpass
 
 symbols = set('''.,;:?!'"-_{}@&#<>[]ß×÷|\~^''')
@@ -64,6 +65,9 @@ def print_password_table():
                     passwords.append(lines[x])
                 if (x % 3) == 1:
                     descriptions.append(lines[x])
+
+            now = datetime.datetime.now()
+            
 
             pass_cols = max(len(max(passwords, key=len)), 8)
             desc_cols = max(len(max(descriptions, key=len)), 11)
@@ -191,16 +195,14 @@ def decrypt_file(path):
         decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
         decrypted_data = decrypted_data.decode('utf-8')
     except ValueError as mac_mismatch:
-        input("✖ MAC validation failed during decryption. No "
-              "authentication guarantees on your password file.\n"
-              "Press Enter to continue...")
+        input("✖ MAC validation failed during decryption. No authentication guarantees on your password file.\n")
         return False, ''
     return True, decrypted_data
 
 
-def encrypt_file(data, path, message):
+def encrypt_file(data, path, message, password):
     kdf_salt = get_random_bytes(16)
-    key = PBKDF2(login_pw, kdf_salt)
+    key = PBKDF2(password, kdf_salt)
     aad = "Operation Overlord"
     cipher = AES.new(key, AES.MODE_GCM)
     cipher.update(str.encode(aad))
@@ -232,21 +234,33 @@ def modify_password_or_description(id, modify_password, password, modify_descrip
 
             data = "\n".join(lines)
             message = "✔ Modification is successfully saved.\nPress Enter to continue..."
-            encrypt_file(data, path, message)
+            encrypt_file(data, path, message, login_pw)
         else:
             return
 
 
-def delete_password(id, path):
+def delete_password(id, number_of_id, path):
     is_mac_valid, decrypted_data = decrypt_file(path)
     if is_mac_valid:
         lines = decrypted_data.split('\n')
-        for x in range(0, 3):
-            del lines[(id - 1) * 3 + x]
 
-        data = "\n".join(lines)
+        if number_of_id == 1:
+            os.remove(path)
+        elif id == number_of_id:
+            for x in range(0, 3):
+                del lines[(id - 1) * 3 - 1]
+        else:
+            for x in range(0, 3):
+                del lines[(id - 1) * 3]
+
         message = "✔ Password is successfully deleted.\nPress Enter to continue..."
-        encrypt_file(data, path, message)
+        if os.path.exists(path):
+            data = "\n".join(lines)
+            encrypt_file(data, path, message, login_pw)
+        else:
+            file = open(path, 'w+')
+            file.close()
+            input(message)
         os.system('clear')
     else:
         return
@@ -254,6 +268,9 @@ def delete_password(id, path):
 
 def save_password_with_description(password, path):
     description = input("Please enter a description for the given password: ")
+    now = datetime.datetime.now()
+    date = str(now.year) + '.' + str(now.month) + '.' + str(now.day) + '.'
+    description = date + description
 
     if not os.stat(path).st_size == 0:
         is_mac_valid, decrypted_data = decrypt_file(path)
@@ -265,7 +282,7 @@ def save_password_with_description(password, path):
         data = password + "\n" + description
 
     message = "✔ Password with description is successfully saved.\nPress Enter to continue..."
-    encrypt_file(data, path, message)
+    encrypt_file(data, path, message, login_pw)
     os.system('clear')
 
 
@@ -434,7 +451,7 @@ while loop:
                 os.system('clear')
                 break
 
-            '''login_email = input("Please enter your e-mail address: ")
+            login_email = input("Please enter your e-mail address: ")
             login_file = login_email + ".bin"
 
             login_pw = input("Please enter your password: ")  # TODO: getpass.getpass()
@@ -446,18 +463,13 @@ while loop:
                     storedkey = fin.read()
                 # print(storedkey)
 
-                if storedkey == hashedkey:'''
+                if storedkey == hashedkey:
+                    password_file = login_email + ".pw.txt"
+                    path = 'database/' + login_email + '/' + password_file
+                    if not os.path.exists(path):
+                        file = open(path, 'w+')
+                        file.close()
 
-            login_email = "a@a.hu"  # TODO use commented part
-            login_pw = "valami123."
-            password_file = login_email + ".pw.txt"
-            path = 'database/' + login_email + '/' + password_file
-            if not os.path.exists(path):
-                file = open(path, 'w+')
-                file.close()
-
-            if True:
-                if True:
                     os.system('clear')
                     manage = True
                     while manage:
@@ -536,75 +548,74 @@ while loop:
                                 if chosen_id < 1 or chosen_id > number_of_id:
                                     raise new_exc from original_exc
                             except:
-                                input("Invalid Id chosen. Please try again.\nPress Enter to continue...")
+                                input("✖ Invalid Id chosen. Please try again.\nPress Enter to continue...")
                                 os.system('clear')
-                                break
+                                chosen_id = 0
 
-                            password = ''
-                            modify_password = input("Do you want to modify password (y/n)? ")
-                            modify_password = modify_password.lower()
-                            if modify_password == 'y':
-                                print("1. Give own password")
-                                print("2. Generate strong random password")
-                                try:
-                                    choice = int(input("Enter your choice [1-2]: "))
-                                    if choice < 1 or choice > 2:
-                                        raise new_exc from original_exc
-                                except:
-                                    input("Invalid Id chosen. Please try again.\nPress Enter to continue...")
-                                    os.system('clear')
-                                    break
-
-                                if choice == 1:
-                                    print(
-                                        "A strong password is at least 8 characters long and contains letters, numbers "
-                                        "and symbols.")
-                                    password = input("Please enter a strong password: ")  # TODO: getpass.getpass()
-
-                                    if password in open('weakPasswordDictionary.txt', encoding=enc).read():
-                                        input(
-                                            "✖ Your password has been found in the weak password dictionary."
-                                            " Please choose another password.\nPress Enter to continue...")
+                            if chosen_id != 0:
+                                interrupt = False
+                                password = ''
+                                modify_password = input("Do you want to modify password (y/n)? ")
+                                modify_password = modify_password.lower()
+                                if modify_password == 'y':
+                                    print("1. Give own password")
+                                    print("2. Generate strong random password")
+                                    try:
+                                        choice = int(input("Enter your choice [1-2]: "))
+                                        if choice < 1 or choice > 2:
+                                            raise new_exc from original_exc
+                                    except:
+                                        input("✖ Invalid Id chosen. Please try again.\nPress Enter to continue...")
                                         os.system('clear')
-                                        break
-                                    else:
-                                        pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
-                                        if password == pw2:
-                                            print("✔ Passwords are the same")
+                                        interrupt = True
 
-                                            long = long_enough(password)
-                                            letter = contains_letter(password)
-                                            number = contains_number(password)
-                                            symbol = contains_symbol(password)
+                                    if choice == 1:
+                                        print("A strong password is at least 8 characters long and contains letters, "
+                                              "numbers and symbols.")
+                                        password = input("Please enter a strong password: ")  # TODO: getpass.getpass()
 
-                                            if long and letter and number and symbol:
-                                                print("✔✔✔ Good password ✔✔✔\n")
+                                        if password in open('weakPasswordDictionary.txt', encoding=enc).read():
+                                            input("✖ Your password has been found in the weak password dictionary."
+                                                " Please choose another password.\nPress Enter to continue...")
+                                            os.system('clear')
+                                            interrupt = True
+                                        else:
+                                            pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
+                                            if password == pw2:
+                                                print("✔ Passwords are the same")
+
+                                                long = long_enough(password)
+                                                letter = contains_letter(password)
+                                                number = contains_number(password)
+                                                symbol = contains_symbol(password)
+
+                                                if long and letter and number and symbol:
+                                                    print("✔✔✔ Good password ✔✔✔\n")
+                                                else:
+                                                    input("✖ ✖ ✖ Weak password. Please try again.\nPress Enter to "
+                                                        "continue...")
+                                                    os.system('clear')
+                                                    interrupt = True
                                             else:
-                                                input(
-                                                    "✖ ✖ ✖ Weak password. Please try again.\nPress Enter to "
+                                                input("✖ Passwords do not match. Please try again.\nPress Enter to "
                                                     "continue...")
                                                 os.system('clear')
-                                                break
-                                        else:
-                                            input(
-                                                "✖ Passwords do not match. Please try again.\nPress Enter to "
-                                                "continue...")
-                                            os.system('clear')
-                                            break
-                                elif choice == 2:
-                                    password = generate_random_strong_password()
-                                    print("✔ Random strong password is generated.")
+                                                interrupt = True
+                                    elif choice == 2:
+                                        password = generate_random_strong_password()
+                                        print("✔ Random strong password is generated.")
 
-                            description = ''
-                            modify_description = input("Do you want to modify description (y/n)? ")
-                            modify_description = modify_description.lower()
-                            if modify_description == 'y':
-                                description = input("Please enter a description for the chosen password: ")
+                                if not interrupt:
+                                    description = ''
+                                    modify_description = input("Do you want to modify description (y/n)? ")
+                                    modify_description = modify_description.lower()
+                                    if modify_description == 'y':
+                                        description = input("Please enter a description for the chosen password: ")
 
-                            if modify_password == 'y' or modify_description == 'y':
-                                modify_password_or_description(chosen_id, modify_password, password, modify_description,
-                                                               description, path)
-                            os.system('clear')
+                                    if modify_password == 'y' or modify_description == 'y':
+                                        modify_password_or_description(chosen_id, modify_password, password, modify_description,
+                                                                       description, path)
+                                    os.system('clear')
                         elif manage_choice == 4:
                             os.system('clear')
                             print(25 * "-", "DELETE PASSWORD", 25 * "-")
@@ -618,11 +629,67 @@ while loop:
                             except:
                                 input("Invalid Id chosen. Please try again.\nPress Enter to continue...")
                                 os.system('clear')
-                                break
-                            delete_password(chosen_id, path)
+                            delete_password(chosen_id, number_of_id, path)
                         elif manage_choice == 5:
-                            print("CHANGE ACCOUNT PASSWORD")
-                            # TODO
+                            os.system('clear')
+                            print(21 * "-", "CHANGE ACCOUNT PASSWORD", 21 * "-")
+                            print('')
+                            current_password = input("Please enter your current password: ") # TODO: getpass.getpass()
+                            hashedkey = pbkdf_gen(current_password)
+
+                            with open('database/' + login_email + '/' + login_file, 'rb') as fin:
+                                storedkey = fin.read()
+
+                            if storedkey == hashedkey:
+                                print("A strong password is at least 8 characters long and contains letters, numbers "
+                                       "and symbols.")
+                                pw1 = input("Please enter a strong password: ")  # TODO: getpass.getpass()
+
+                                # Same as email?
+                                if pw1 in login_email:
+                                    input(
+                                        "✖ E-mail and password are (partly) the same. Please choose another password.\n"
+                                        "Press Enter to continue...")
+                                    os.system('clear')
+                                elif pw1 in open('weakPasswordDictionary.txt', encoding=enc).read():
+                                    input("✖ Your password has been found in the weak password dictionary. Please "
+                                          "choose another password.\nPress Enter to continue...")
+                                    os.system('clear')
+                                else:
+                                    pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
+
+                                    if pw1 == pw2:
+                                        print("✔ Passwords are the same")
+
+                                        long = long_enough(pw1)
+                                        letter = contains_letter(pw1)
+                                        number = contains_number(pw1)
+                                        symbol = contains_symbol(pw1)
+
+                                        if long and letter and number and symbol:
+                                            print("✔✔✔ Good password ✔✔✔")
+
+                                            if not os.stat(path).st_size == 0:
+                                                is_mac_valid, decrypted_data = decrypt_file(path)
+                                                if is_mac_valid:
+                                                    message = "✔ Password file with new password is successfully " \
+                                                              "reencrypted.\nPress Enter to continue..."
+                                                    encrypt_file(decrypted_data, path, message, pw1)
+                                                    login_pw = pw1
+                                                    os.system('clear')
+
+                                            with open('database/' + login_email + '/' + login_file, 'wb') as f:
+                                                f.write(pbkdf_gen(pw1))
+                                            f.close()
+                                        else:
+                                            input("✖ ✖ ✖ Weak password. Please try again.\nPress Enter to continue...")
+                                            os.system('clear')
+                                    else:
+                                        input("✖ Passwords do not match. Please try again.\nPress Enter to continue...")
+                                        os.system('clear')
+                            else:
+                                input("✖ Incorrect password. Please try again.\nPress Enter to continue...")
+                                os.system('clear')
                         elif manage_choice == 6:
                             manage = False
                             login = False
