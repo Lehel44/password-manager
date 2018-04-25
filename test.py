@@ -188,6 +188,7 @@ def generate_random_strong_password():
 def decrypt_file(path):
     file_in = open(path, 'r')
     pw_file_text = file_in.readlines()
+    file_in.close()
     aad, ciphertext, tag, nonce, kdf_salt = pw_file_text
 
     aad = aad[:-1]
@@ -207,7 +208,9 @@ def decrypt_file(path):
         decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
         decrypted_data = decrypted_data.decode('utf-8')
     except ValueError as mac_mismatch:
-        input("✖ MAC validation failed during decryption. No authentication guarantees on your password file.\n")
+        input("✖ MAC validation failed during decryption. No authentication guarantees on your password file.\n"
+              "Press Enter to continue...")
+        os.system('clear')
         return False, ''
     return True, decrypted_data
 
@@ -235,20 +238,46 @@ def encrypt_file(data, path, message, password):
     input(message)
 
 
-def modify_password_or_description(id, modify_password, password, modify_description, description, path):
-        is_mac_valid, decrypted_data = decrypt_file(path)
-        if is_mac_valid:
-            lines = decrypted_data.split('\n')
-            if modify_password == 'y':
-                lines[(id-1) * 3] = password
-            if modify_description == 'y':
-                lines[(id-1) * 3 + 1] = description
+def find_nth(haystack, needle, n):
+    start = haystack.find(needle)
+    while start >= 0 and n > 1:
+        start = haystack.find(needle, start+len(needle))
+        n -= 1
+    return start
 
-            data = "\n".join(lines)
-            message = "✔ Modification is successfully saved.\nPress Enter to continue..."
-            encrypt_file(data, path, message, login_pw)
-        else:
-            return
+
+def modify_password_or_description(id, modify_password, password, modify_description, description, path):
+    is_mac_valid, decrypted_data = decrypt_file(path)
+    if is_mac_valid:
+        lines = decrypted_data.split('\n')
+        if modify_password == 'n' and modify_description == 'y':
+            old_desc = lines[(id - 1) * 3 + 1]
+            pos = find_nth(old_desc, '.', 3) + 1
+            date = old_desc[:pos]
+            description = date + description
+            lines[(id - 1) * 3 + 1] = description
+
+        if modify_password == 'y' and modify_description == 'n':
+            now = datetime.datetime.now()
+            date = str(now.year) + '.' + str(now.month) + '.' + str(now.day) + '.'
+            old_desc = lines[(id - 1) * 3 + 1]
+            pos = find_nth(old_desc, '.', 3) + 1
+            description = date + old_desc[pos:]
+            lines[(id - 1) * 3] = password
+            lines[(id-1) * 3 + 1] = description
+
+        if modify_password == 'y' and modify_description == 'y':
+            now = datetime.datetime.now()
+            date = str(now.year) + '.' + str(now.month) + '.' + str(now.day) + '.'
+            description = date + description
+            lines[(id - 1) * 3] = password
+            lines[(id-1) * 3 + 1] = description
+
+        data = "\n".join(lines)
+        message = "✔ Modification is successfully saved.\nPress Enter to continue..."
+        encrypt_file(data, path, message, login_pw)
+    else:
+        return
 
 
 def delete_password(id, number_of_id, path):
@@ -396,6 +425,7 @@ while loop:
                 break
 
             # print("The chosen e-mail is: ", email)
+            print("WARNING: In case of forgetting account password leads to lose all the data stored by the account!")
             print("A strong password is at least 8 characters long and contains letters, numbers and symbols.")
             pw1 = input("Please enter a strong password: ")  # TODO: getpass.getpass()
 
@@ -439,6 +469,11 @@ while loop:
                             f.write(pbkdf_gen(pw1))
                         f.close()
 
+                        prev_pw_file = email + ".prev.txt"
+                        with open('database/' + email + '/' + prev_pw_file, 'w') as f:
+                            f.write(str(pbkdf_gen(pw1)))
+                        f.close()
+
                         input("Press Enter to continue...")
                         os.system('clear')
                         break
@@ -473,6 +508,7 @@ while loop:
             if login_email in open('database/users.txt').read().splitlines():
                 with open('database/' + login_email + '/' + login_file, 'rb') as fin:
                     storedkey = fin.read()
+                fin.close()
                 # print(storedkey)
 
                 if storedkey == hashedkey:
@@ -651,6 +687,7 @@ while loop:
 
                             with open('database/' + login_email + '/' + login_file, 'rb') as fin:
                                 storedkey = fin.read()
+                            fin.close()
 
                             if storedkey == hashedkey:
                                 print("A strong password is at least 8 characters long and contains letters, numbers "
@@ -681,18 +718,46 @@ while loop:
                                         if long and letter and number and symbol:
                                             print("✔✔✔ Good password ✔✔✔")
 
-                                            if not os.stat(path).st_size == 0:
-                                                is_mac_valid, decrypted_data = decrypt_file(path)
-                                                if is_mac_valid:
-                                                    message = "✔ Password file with new password is successfully " \
-                                                              "reencrypted.\nPress Enter to continue..."
-                                                    encrypt_file(decrypted_data, path, message, pw1)
-                                                    login_pw = pw1
-                                                    os.system('clear')
+                                            file_in = open("database/" + login_email + "/" + login_email + ".prev.txt",
+                                                           'r')
+                                            pw_file_text = file_in.readlines()
+                                            file_in.close()
 
-                                            with open('database/' + login_email + '/' + login_file, 'wb') as f:
-                                                f.write(pbkdf_gen(pw1))
-                                            f.close()
+                                            pbkdf_pw = pbkdf_gen(pw1)
+                                            for x in range(0, len(pw_file_text)):
+                                                pw_file_text[x] = pw_file_text[x].rstrip()
+                                            if str(pbkdf_pw) not in pw_file_text:
+                                                if len(pw_file_text) == 6:
+                                                    pw_file_text.pop(0)
+
+                                                pw_file_text.append(str(pbkdf_pw))
+                                                pw_file_text = "\n".join(pw_file_text)
+
+                                                prev_pw_file = login_email + ".prev.txt"
+                                                with open('database/' + login_email + '/' + prev_pw_file, 'w') as f:
+                                                    f.write(pw_file_text)
+                                                f.close()
+
+                                                if not os.stat(path).st_size == 0:
+                                                    is_mac_valid, decrypted_data = decrypt_file(path)
+                                                    if is_mac_valid:
+                                                        message = "✔ Password file with new password is successfully " \
+                                                                  "reencrypted.\nPress Enter to continue..."
+                                                        encrypt_file(decrypted_data, path, message, pw1)
+                                                else:
+                                                    input("✔ Password is successfully changed.\n"
+                                                          "Press Enter to continue...")
+
+                                                login_pw = pw1
+
+                                                with open('database/' + login_email + '/' + login_file, 'wb') as f:
+                                                    f.write(pbkdf_pw)
+                                                f.close()
+                                                os.system('clear')
+                                            else:
+                                                input("✖ Recently used password. Please choose another one.\n"
+                                                      "Press Enter to continue...")
+                                                os.system('clear')
                                         else:
                                             input("✖ ✖ ✖ Weak password. Please try again.\nPress Enter to continue...")
                                             os.system('clear')
@@ -726,6 +791,8 @@ while loop:
             input("✖ You need to register first.\nPress Enter to continue...")
             os.system('clear')
         else:
+            input("WARNING: Claiming for a new password leads to erase all the data stored by the account!\n"
+                  "OK, I got it! Do it! Press Enter to continue...")
             forgot_email = input("Enter your e-mail address: ")
             send_out_generated_password(forgot_email)
 
