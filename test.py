@@ -198,54 +198,7 @@ def decrypt_file(path):
     return True, decrypted_data
 
 
-def modify_password_or_description(id, modify_password, password, modify_description, description, path):
-        is_mac_valid, decrypted_data = decrypt_file(path)
-        if is_mac_valid:
-            lines = decrypted_data.split('\n')
-            if modify_password == 'y':
-                lines[(id-1) * 3] = password
-            if modify_description == 'y':
-                lines[(id-1) * 3 + 1] = description
-
-            data = "\n".join(lines)
-
-            kdf_salt = get_random_bytes(16)
-            key = PBKDF2(login_pw, kdf_salt)
-            aad = "Operation Overlord"
-            cipher = AES.new(key, AES.MODE_GCM)
-            cipher.update(str.encode(aad))
-            ciphertext, tag = cipher.encrypt_and_digest(str.encode(data))
-            nonce = cipher.nonce
-
-            with open(path, 'w') as f:
-                f.write(aad)
-                f.write('\n')
-                f.write(str(ciphertext))
-                f.write('\n')
-                f.write(str(tag))
-                f.write('\n')
-                f.write(str(nonce))
-                f.write('\n')
-                f.write(str(kdf_salt))
-            f.close()
-            input("✔ Modification is successfully saved.\n"
-                  "Press Enter to continue...")
-        else:
-            return
-
-
-def save_password_with_description(password, path):
-    description = input("Please enter a description for the given password: ")
-
-    if not os.stat(path).st_size == 0:
-        is_mac_valid, decrypted_data = decrypt_file(path)
-        if is_mac_valid:
-            data = decrypted_data + "\n\n" + password + "\n" + description
-        else:
-            return
-    else:
-        data = password + "\n" + description
-
+def encrypt_file(data, path, message):
     kdf_salt = get_random_bytes(16)
     key = PBKDF2(login_pw, kdf_salt)
     aad = "Operation Overlord"
@@ -265,8 +218,54 @@ def save_password_with_description(password, path):
         f.write('\n')
         f.write(str(kdf_salt))
     f.close()
-    input("✔ Password with description is successfully saved.\n"
-          "Press Enter to continue...")
+    input(message)
+
+
+def modify_password_or_description(id, modify_password, password, modify_description, description, path):
+        is_mac_valid, decrypted_data = decrypt_file(path)
+        if is_mac_valid:
+            lines = decrypted_data.split('\n')
+            if modify_password == 'y':
+                lines[(id-1) * 3] = password
+            if modify_description == 'y':
+                lines[(id-1) * 3 + 1] = description
+
+            data = "\n".join(lines)
+            message = "✔ Modification is successfully saved.\nPress Enter to continue..."
+            encrypt_file(data, path, message)
+        else:
+            return
+
+
+def delete_password(id, path):
+    is_mac_valid, decrypted_data = decrypt_file(path)
+    if is_mac_valid:
+        lines = decrypted_data.split('\n')
+        for x in range(0, 3):
+            del lines[(id - 1) * 3 + x]
+
+        data = "\n".join(lines)
+        message = "✔ Password is successfully deleted.\nPress Enter to continue..."
+        encrypt_file(data, path, message)
+        os.system('clear')
+    else:
+        return
+
+
+def save_password_with_description(password, path):
+    description = input("Please enter a description for the given password: ")
+
+    if not os.stat(path).st_size == 0:
+        is_mac_valid, decrypted_data = decrypt_file(path)
+        if is_mac_valid:
+            data = decrypted_data + "\n\n" + password + "\n" + description
+        else:
+            return
+    else:
+        data = password + "\n" + description
+
+    message = "✔ Password with description is successfully saved.\nPress Enter to continue..."
+    encrypt_file(data, path, message)
     os.system('clear')
 
 
@@ -607,8 +606,20 @@ while loop:
                                                                description, path)
                             os.system('clear')
                         elif manage_choice == 4:
-                            print("DELETE PASSWORD")
-                            # TODO
+                            os.system('clear')
+                            print(25 * "-", "DELETE PASSWORD", 25 * "-")
+                            print('')
+                            number_of_id = print_password_table()
+                            try:
+                                print("Type anything but valid Id to back!")
+                                chosen_id = int(input("The Id of the row you want to modify: "))
+                                if chosen_id < 1 or chosen_id > number_of_id:
+                                    raise new_exc from original_exc
+                            except:
+                                input("Invalid Id chosen. Please try again.\nPress Enter to continue...")
+                                os.system('clear')
+                                break
+                            delete_password(chosen_id, path)
                         elif manage_choice == 5:
                             print("CHANGE ACCOUNT PASSWORD")
                             # TODO
