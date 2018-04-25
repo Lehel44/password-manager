@@ -9,6 +9,7 @@ from Crypto import Random
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.message import EmailMessage
+from datetime import date
 import random
 import hashlib
 import os
@@ -60,14 +61,25 @@ def print_password_table():
             passwords = []
             descriptions = []
 
+            now = datetime.datetime.now()
+            today = date(now.year, now.month, now.day)
+
             for x in range(0, len(lines)):
                 if (x % 3) == 0:
                     passwords.append(lines[x])
                 if (x % 3) == 1:
+                    date_list = [0, 0, 0]
+                    for y in range(0,3):
+                        pos = lines[x].find('.')
+                        date_list[y] = int(lines[x][:pos])
+                        lines[x] = lines[x][pos+1:]
+                    creation_day = date(date_list[0], date_list[1], date_list[2])
+                    delta = (today - creation_day).days
+                    if delta >= 90:
+                        lines[x] = "(EXPIRED) " + lines[x]
+                    else:
+                        lines[x] = "(" + str(90 - delta) + ") " + lines[x]
                     descriptions.append(lines[x])
-
-            now = datetime.datetime.now()
-            
 
             pass_cols = max(len(max(passwords, key=len)), 8)
             desc_cols = max(len(max(descriptions, key=len)), 11)
