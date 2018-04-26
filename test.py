@@ -1,14 +1,9 @@
-# Password manager in Python
-from typing import Any, Tuple, Union
-
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
-from Crypto import Random
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.message import EmailMessage
 from datetime import date
 import random
 import hashlib
@@ -21,7 +16,6 @@ import getpass
 symbols = set('''.,;:?!'"-_{}@&#<>[]ß×÷|\~^''')
 enc = 'iso-8859-15'
 
-# Menu design
 def print_menu():
     print(31 * "-", "MENU", 30 * "-")
     print("1. Register")
@@ -166,7 +160,7 @@ def contains_symbol(pw):
 def pbkdf_gen(password):
     salt = hashlib.sha256().digest()
     key_size = 256
-    keys = PBKDF2(password, salt, count=20000, dkLen = key_size * 2)  # 2x256 bit keys
+    keys = PBKDF2(password, salt, count=20000, dkLen = key_size * 2)
     return keys
 
 
@@ -216,7 +210,7 @@ def decrypt_file(path):
 
 
 def encrypt_file(data, path, message, password):
-    kdf_salt = get_random_bytes(16)
+    kdf_salt = get_random_bytes(32)
     key = PBKDF2(password, kdf_salt)
     aad = "Operation Overlord"
     cipher = AES.new(key, AES.MODE_GCM)
@@ -334,7 +328,6 @@ def send_out_generated_password(email):
     else:
         generated_pass = generate_random_strong_password()
 
-        # Register new password to the correct file
         pbkdf_pass = pbkdf_gen(generated_pass)
         if email in open('database/users.txt').read().splitlines():
             with open('database/' + email + '/' + email + '.bin', 'wb') as fgen:
@@ -380,9 +373,6 @@ def send_out_generated_password(email):
         os.system('clear')
 
 
-# Ezt kell elküldeni emailben -> SMTP library
-# pbkdf_gen("LehelJelszoAsd")
-
 loop = True
 register = True
 login = True
@@ -394,7 +384,7 @@ while loop:
 
     while True:
         try:
-            print_menu()  # Displays menu
+            print_menu()
             choice = int(input("Enter your choice [1-4]: "))
             break
         except:
@@ -424,12 +414,10 @@ while loop:
                 os.system('clear')
                 break
 
-            # print("The chosen e-mail is: ", email)
             print("WARNING: In case of forgetting account password leads to lose all the data stored by the account!")
             print("A strong password is at least 8 characters long and contains letters, numbers and symbols.")
-            pw1 = input("Please enter a strong password: ")  # TODO: getpass.getpass()
+            pw1 = getpass.getpass("Please enter a strong password: ")
 
-            # Same as email?
             if pw1 in email:
                 input("✖ E-mail and password are (partly) the same. Please choose another password.\n"
                       "Press Enter to continue...")
@@ -441,9 +429,7 @@ while loop:
                 os.system('clear')
                 break
             else:
-                pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
-                # pw1 = getpass.getpass('Please enter a strong password: ')
-                # pw2 = getpass.getpass('Please re-enter your chosen password: ')
+                pw2 = getpass.getpass("Please re-enter your chosen password: ")
 
                 if pw1 == pw2:
                     print("✔ Passwords are the same")
@@ -456,12 +442,10 @@ while loop:
                     if long and letter and number and symbol:
                         print("✔✔✔ Good password ✔✔✔")
 
-                        # Add new e-mail to users.txt
                         with open('database/users.txt', 'a') as file:
                             file.write(email + "\n")
                         file.close
 
-                        # Create new file with PBKDF2 key for user
                         emailfile = email + ".bin"
 
                         os.mkdir('database/' + email)
@@ -501,15 +485,13 @@ while loop:
             login_email = input("Please enter your e-mail address: ")
             login_file = login_email + ".bin"
 
-            login_pw = input("Please enter your password: ")  # TODO: getpass.getpass()
+            login_pw = getpass.getpass("Please enter your password: ")
             hashedkey = pbkdf_gen(login_pw)
-            # print(hashedkey)
 
             if login_email in open('database/users.txt').read().splitlines():
                 with open('database/' + login_email + '/' + login_file, 'rb') as fin:
                     storedkey = fin.read()
                 fin.close()
-                # print(storedkey)
 
                 if storedkey == hashedkey:
                     password_file = login_email + ".pw.txt"
@@ -553,15 +535,14 @@ while loop:
                             if add_pw_choice == 1:
                                 print("A strong password is at least 8 characters long and contains letters, numbers "
                                       "and symbols.")
-                                pw1 = input("Please enter a strong password: ")  # TODO: getpass.getpass()
+                                pw1 = getpass.getpass("Please enter a strong password: ")
 
                                 if pw1 in open('weakPasswordDictionary.txt', encoding=enc).read():
-                                    input(
-                                        "✖ Your password has been found in the weak password dictionary. Please choose another password."
-                                        "\nPress Enter to continue...")
+                                    input("✖ Your password has been found in the weak password dictionary. Please "
+                                          "choose another password.\nPress Enter to continue...")
                                     os.system('clear')
                                 else:
-                                    pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
+                                    pw2 = getpass.getpass("Please re-enter your chosen password: ")
                                     if pw1 == pw2:
                                         print("✔ Passwords are the same")
 
@@ -620,15 +601,15 @@ while loop:
                                     if choice == 1:
                                         print("A strong password is at least 8 characters long and contains letters, "
                                               "numbers and symbols.")
-                                        password = input("Please enter a strong password: ")  # TODO: getpass.getpass()
+                                        password = getpass.getpass("Please enter a strong password: ")
 
                                         if password in open('weakPasswordDictionary.txt', encoding=enc).read():
-                                            input("✖ Your password has been found in the weak password dictionary."
-                                                " Please choose another password.\nPress Enter to continue...")
+                                            input("✖ Your password has been found in the weak password dictionary. "
+                                                  "Please choose another password.\nPress Enter to continue...")
                                             os.system('clear')
                                             interrupt = True
                                         else:
-                                            pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
+                                            pw2 = getpass.getpass("Please re-enter your chosen password: ")
                                             if password == pw2:
                                                 print("✔ Passwords are the same")
 
@@ -661,8 +642,8 @@ while loop:
                                         description = input("Please enter a description for the chosen password: ")
 
                                     if modify_password == 'y' or modify_description == 'y':
-                                        modify_password_or_description(chosen_id, modify_password, password, modify_description,
-                                                                       description, path)
+                                        modify_password_or_description(chosen_id, modify_password, password,
+                                                                       modify_description, description, path)
                                     os.system('clear')
                         elif manage_choice == 4:
                             os.system('clear')
@@ -682,7 +663,7 @@ while loop:
                             os.system('clear')
                             print(21 * "-", "CHANGE ACCOUNT PASSWORD", 21 * "-")
                             print('')
-                            current_password = input("Please enter your current password: ") # TODO: getpass.getpass()
+                            current_password = getpass.getpass("Please enter your current password: ")
                             hashedkey = pbkdf_gen(current_password)
 
                             with open('database/' + login_email + '/' + login_file, 'rb') as fin:
@@ -692,20 +673,18 @@ while loop:
                             if storedkey == hashedkey:
                                 print("A strong password is at least 8 characters long and contains letters, numbers "
                                        "and symbols.")
-                                pw1 = input("Please enter a strong password: ")  # TODO: getpass.getpass()
+                                pw1 = getpass.getpass("Please enter a strong password: ")
 
-                                # Same as email?
                                 if pw1 in login_email:
-                                    input(
-                                        "✖ E-mail and password are (partly) the same. Please choose another password.\n"
-                                        "Press Enter to continue...")
+                                    input("✖ E-mail and password are (partly) the same. Please choose another password."
+                                          "\nPress Enter to continue...")
                                     os.system('clear')
                                 elif pw1 in open('weakPasswordDictionary.txt', encoding=enc).read():
                                     input("✖ Your password has been found in the weak password dictionary. Please "
                                           "choose another password.\nPress Enter to continue...")
                                     os.system('clear')
                                 else:
-                                    pw2 = input("Please re-enter your chosen password: ")  # TODO: getpass.getpass()
+                                    pw2 = getpass.getpass("Please re-enter your chosen password: ")
 
                                     if pw1 == pw2:
                                         print("✔ Passwords are the same")
